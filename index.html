@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Módulo Interativo — Adjetivos (Clube Eslavo)</title>
+<style>
+  :root{
+    --verde:#16a34a;
+    --bg:#071014;
+    --text:#eef6ee;
+    --panel: rgba(255,255,255,0.03);
+    --muted: rgba(255,255,255,0.18);
+    --editor-bg: rgba(3,7,11,0.95);
+    --accent: #0f8b3a;
+  }
+  *{box-sizing:border-box}
+  body{ margin:0; font-family:Inter, Poppins, system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:var(--bg); color:var(--text); min-height:100vh; }
+  .app{ display:flex; gap:16px; padding:18px; align-items:flex-start; justify-content:center; }
+
+  /* Lateral menu de aulas */
+  .lessons-menu {
+    width:260px;
+    max-height:calc(100vh - 36px);
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:12px;
+    padding:12px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.6);
+    overflow:auto;
+  }
+  .lessons-menu h3{ margin:0 0 8px 0; font-size:1rem; color:var(--muted); }
+  .lesson-item{ padding:8px 10px; border-radius:8px; margin-bottom:8px; background:transparent; border:1px solid rgba(255,255,255,0.03); cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+  .lesson-item.active{ background:rgba(255,255,255,0.03); border-left:4px solid var(--verde); font-weight:700; }
+  .lesson-actions{ display:flex; gap:6px; }
+
+  /* Module container (main) */
+  .module{ width:100%; max-width:1100px; border-radius:12px; overflow:hidden; box-shadow:0 12px 48px rgba(0,0,0,0.6); background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.15)); position:relative; }
+  .visual{ position:relative; min-height:520px; background:#000; display:flex; align-items:center; justify-content:center; padding:28px; }
+  .bg{ position:absolute; inset:0; background-size:cover; background-position:center; filter:brightness(.55) contrast(.98); transition:background-image .9s ease-in-out; }
+  .texts{ position:relative; z-index:4; width:100%; max-width:920px; text-align:center; }
+  .title { font-size:1.05rem; font-weight:700; color:var(--muted); margin-bottom:12px; }
+  .pt{ font-size:2.1rem; font-weight:800; margin-bottom:10px; line-height:1.25; text-shadow:0 6px 18px rgba(0,0,0,0.6); }
+  .ru{ font-size:1.35rem; color:var(--muted); opacity:0.98; margin-bottom:6px; text-shadow:0 4px 12px rgba(0,0,0,0.6); }
+
+  .controls-area{ display:flex; gap:12px; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--panel); position:relative; z-index:5; }
+  .controls-left{ display:flex; gap:8px; align-items:center; }
+  .controls-right{ display:flex; gap:8px; align-items:center; }
+
+  button{ background:var(--verde); color:#04230a; border:none; padding:10px 12px; border-radius:8px; font-weight:700; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,0.45); }
+  button.ghost{ background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.04); }
+  .small{ padding:8px 10px; font-size:0.95rem; }
+  .progress{ height:10px; background:rgba(255,255,255,0.05); border-radius:8px; overflow:hidden; width:320px; }
+  .bar{ height:100%; width:0%; background:linear-gradient(90deg,#ffd366,#ffb86b); transition:width .12s linear; }
+  .scene-list{ padding:12px 20px; background:rgba(0,0,0,0.04); display:flex; gap:10px; overflow:auto; position:relative; z-index:5; }
+  .scene-item{ min-width:160px; padding:10px 12px; border-radius:8px; background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.03); cursor:pointer; font-size:0.95rem; }
+  .scene-item.active{ background:rgba(255,255,255,0.03); border-left:4px solid var(--verde); font-weight:700; }
+  .status{ font-size:0.92rem; color:var(--muted); margin-left:8px; }
+  footer{ text-align:center; padding:14px; font-size:0.9rem; color:var(--muted); position:relative; z-index:5; }
+
+  /* Fixed buttons */
+  #editorBtn, #fsBtn, #viewBtn {
+    position: fixed;
+    right: 20px;
+    z-index: 9999;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    cursor: pointer;
+    font-weight:800;
+  }
+  #editorBtn { top: 20px; background: var(--verde); color:#04230a; }
+  #fsBtn { top: 70px; background: rgba(255,255,255,0.05); color:var(--text); border:1px solid rgba(255,255,255,0.04); }
+  #viewBtn { top: 120px; background: rgba(255,255,255,0.05); color:var(--text); border:1px solid rgba(255,255,255,0.04); }
+
+  /* Editor panel */
+  #editorPanel {
+    position: fixed;
+    right: 20px; top: 170px;
+    width: 420px; max-width: calc(100% - 40px);
+    height: calc(100vh - 190px);
+    background: var(--editor-bg);
+    color: #eaf6ea;
+    border-radius: 12px;
+    box-shadow: 0 12px 50px rgba(0,0,0,0.7);
+    z-index: 9998;
+    display: none;
+    flex-direction: column;
+  }
+  #editorHeader { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.03); display:flex; justify-content:space-between; }
+  #editorBody { padding: 12px; overflow:auto; flex:1; }
+  .editor-scene { border-radius:8px; padding:10px; margin-bottom:10px; background: rgba(255,255,255,0.02); }
+  .editor-scene input[type="text"], .editor-scene textarea, .editor-scene select { width:100%; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--text); margin-top:6px; }
+  .small-ghost { background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.06); padding:8px 10px; border-radius:8px; cursor:pointer; }
+  .img-preview { width:100%; height:120px; object-fit:cover; border-radius:8px; margin-top:8px; border:1px solid rgba(255,255,255,0.04); }
+
+  /* start overlay */
+  #startOverlay{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); z-index:999;
+  }
+  #startLessonBtn{
+    font-size:2rem;
+    background:var(--verde);
+    color:#04230a;
+    border:none;
+    padding:18px 36px;
+    border-radius:14px;
+    font-weight:800;
+    box-shadow:0 12px 40px rgba(0,0,0,0.6);
+    cursor:pointer;
+  }
+
+  /* exercises */
+  #exercisesPanel { padding:18px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; margin-top:12px; }
+  .question { margin-bottom:14px; }
+  .choice { display:block; margin:6px 0; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); cursor:pointer; background:transparent; color:var(--text); }
+  .choice.correct { border-color: rgba(40,200,100,0.7); background: rgba(40,200,100,0.08); color: #bff0c7; }
+  .choice.wrong { border-color: rgba(240,80,80,0.6); background: rgba(240,80,80,0.06); color: #ffd6d6; }
+
+  /* hide interface mode (visual only) */
+  .hide-interface #editorBtn,
+  .hide-interface #fsBtn,
+  .hide-interface #viewBtn,
+  .hide-interface #editorPanel,
+  .hide-interface .controls-area,
+  .hide-interface .scene-list,
+  .hide-interface footer {
+    display: none !important;
+  }
+  .hide-interface .visual { min-height: 100vh; padding: 0; }
+  .hide-interface .module { box-shadow:none; border-radius:0; max-width:100%; }
+
+  @media(max-width:1100px){
+    .app{ padding:12px; flex-direction:column; align-items:center; }
+    .lessons-menu{ width:100%; max-width:980px; }
+  }
+</style>
+</head>
+<body>
+  <!-- Global controls fixed -->
+  <button id="editorBtn" title="Editar aula (abrir painel)">✏️ Editar aula</button>
+  <button id="fsBtn" title="Tela cheia (página inteira)">⛶ Tela cheia</button>
+  <button id="viewBtn" title="Visualizar somente tela">🖥️ Visualizar somente tela</button>
+
+  <div class="app">
+    <!-- Lessons menu (left) -->
+    <div class="lessons-menu" id="lessonsMenu" aria-label="Menu de aulas">
+      <h3>Minhas Aulas</h3>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input id="newLessonName" placeholder="Nome da nova aula" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)" />
+        <button id="createLessonBtn" class="small">Criar</button>
+      </div>
+      <div id="lessonsList"></div>
+
+      <div style="margin-top:12px;color:var(--muted);font-size:0.9rem">
+        Dica: cada aula tem seu conjunto de cenas/exercícios e é salva no navegador (localStorage).
+      </div>
+    </div>
+
+    <!-- Main module -->
+    <div class="module" role="region" aria-label="Módulo Interativo Adjetivos">
+      <div class="visual" id="visualArea">
+        <div id="bg" class="bg" aria-hidden="true"></div>
+
+        <div class="texts" aria-live="polite">
+          <div class="title">Adjetivos em Português — прилагательные по-португальски</div>
+          <div id="ptText" class="pt">Clique em ▶️ Começar a lição</div>
+          <div id="ruText" class="ru">Дмитрий объясняет прилагательные на португальском.</div>
+        </div>
+
+        <!-- Start overlay -->
+        <div id="startOverlay">
+          <button id="startLessonBtn">▶️ Iniciar Aula</button>
+        </div>
+      </div>
+
+      <div class="controls-area" role="toolbar" aria-label="Controles do módulo">
+        <div class="controls-left">
+          <button id="prevBtn" class="ghost small" title="Voltar (Anterior)">⏮️</button>
+          <button id="playBtn" class="small" title="Reproduzir">▶️</button>
+          <button id="pauseBtn" class="ghost small" title="Pausar">⏸️</button>
+          <button id="stopBtn" class="ghost small" title="Parar">⏹️</button>
+          <button id="nextBtn" class="ghost small" title="Avançar">⏭️</button>
+
+          <div class="progress" aria-hidden="false" title="Progresso">
+            <div id="bar" class="bar" style="width:0%"></div>
+          </div>
+          <div id="status" class="status">Pronto</div>
+        </div>
+
+        <div class="controls-right">
+          <button id="toggleLang" class="ghost small" title="Alternar legendas">Legendas: Ambos</button>
+        </div>
+      </div>
+
+      <div id="sceneList" class="scene-list" aria-label="Lista de cenas"></div>
+
+      <div id="exercisesPanel" style="display:none;">
+        <h3 style="margin-top:0">Exercícios — revise o que aprendeu</h3>
+        <div id="questionsContainer"></div>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button id="restartLessonBtn" class="small-ghost">🔁 Reiniciar Aula</button>
+          <button id="exportLessonBtn" class="small-ghost">⬇️ Exportar Aula</button>
+        </div>
+      </div>
+
+      <footer>© 2025 Clube Eslavo — insira este módulo na sua videoaula</footer>
+    </div>
+  </div>
+
+  <!-- Editor Panel -->
+  <div id="editorPanel" role="dialog" aria-label="Editor de Aula">
+    <div id="editorHeader">
+      <div style="font-weight:800">Adjetivos — editar aula</div>
+      <div>
+        <button id="closeEditor" class="small-ghost" title="Fechar editor">Fechar</button>
+      </div>
+    </div>
+    <div id="editorBody">
+      <div style="margin-bottom:8px;color:var(--muted);font-size:0.95rem">
+        Edite as frases (pt / ru), escolha a ordem de reprodução por cena (PT→RU ou RU→PT) e faça upload da imagem. As alterações são salvas na aula atualmente selecionada.
+      </div>
+      <div id="editorScenesContainer"></div>
+
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="addSceneBtn" class="small-ghost">➕ Adicionar cena</button>
+        <button id="saveApplyBtn" class="small-ghost">💾 Salvar e aplicar</button>
+        <button id="exportJsonBtn" class="small-ghost">⬇️ Exportar JSON</button>
+        <button id="importJsonBtn" class="small-ghost">⬆️ Importar JSON</button>
+        <button id="resetBtn" class="small-ghost" style="border-color:rgba(255,80,80,0.4); color:#ffd6d6">Resetar original</button>
+      </div>
+
+      <div style="margin-top:12px;color:var(--muted);font-size:0.9rem">
+        Observação: imagens carregadas ficam armazenadas localmente (localStorage). Use Exportar JSON para backup/transferência.
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================
+   Index completo — Clube Eslavo
+   - Lições (menu lateral)
+   - Editor de cenas
+   - Start button (fullscreen + play)
+   - Google TTS attempt + speechSynthesis fallback
+   - Exercícios (após última cena)
+   ========================= */
+
+/* ---------- Config / dados originais ---------- */
+const DEFAULT_LESSON_NAME = "Adjetivos — RIO";
+const LESSONS_KEY = 'clubeslavo_lessons_v1'; // guarda todas as aulas
+const SELECTED_LESSON_KEY = 'clubeslavo_selected_lesson_v1';
+
+/* estrutura de aula padrão (pode ser exportada/importada) */
+const DEFAULT_LESSON = {
+  name: DEFAULT_LESSON_NAME,
+  scenes: [
+    { pt: "Esta é a minha cidade. Esta é a minha cidade grande e bonita. Esta é a minha cidade grande, bonita e populosa.",
+      ru: "Это мой город, это мой большой, красивый город, это мой большой, красивый и густонаселённый город.",
+      img: "", order: "pt-ru" },
+    { pt: "Ela se chama Rio de Janeiro, e eu moro aqui. Eu gosto daqui.",
+      ru: "Он называется Рио-де-Жанейро, и я живу здесь. Мне здесь нравится.",
+      img: "", order: "pt-ru" },
+    { pt: "Em português, usamos adjetivos para descrever algo. Por exemplo: grande, bonito, populoso.",
+      ru: "По-португальски мы используем прилагательные, чтобы описывать что-то. Например: grande, bonito, populoso.",
+      img: "", order: "pt-ru" },
+    { pt: "Grande significa \"большой\"; bonito significa \"красивый\"; populoso significa \"густонаселённый\".",
+      ru: "Grande означает \"большой\"; bonito означает \"красивый\"; populoso означает \"густонаселённый\".",
+      img: "", order: "pt-ru" },
+    { pt: "Agora repita comigo: Esta é a minha cidade grande e bonita!",
+      ru: "Теперь повторите со мной: Это мой большой и красивый город!",
+      img: "", order: "pt-ru" },
+    { pt: "Hoje aprendemos os adjetivos em português! Até a próxima!",
+      ru: "Сегодня мы выучили прилагательные по-португальски! До скорой встречи!",
+      img: "", order: "pt-ru" }
+  ],
+  exercises: [
+    {
+      q: "Como se diz 'grande' em russo?",
+      choices: ["красивый","большой","густонаселённый","маленький"],
+      correct: 1
+    },
+    {
+      q: "Qual é a tradução de 'bonito'?",
+      choices: ["красивый","большой","плотный","тихий"],
+      correct: 0
+    },
+    {
+      q: "Qual adjetivo significa 'густонаселённый'?",
+      choices: ["populoso","bonito","pequeno","novo"],
+      correct: 0
+    },
+    {
+      q: "A frase: 'Esta é a minha cidade grande e bonita' usa quantos adjetivos?",
+      choices: ["1","2","3","0"],
+      correct: 1
+    },
+    {
+      q: "Onde estamos na lição do exemplo?",
+      choices: ["São Paulo","Brasília","Rio de Janeiro","Porto Alegre"],
+      correct: 2
+    }
+  ]
+};
+
+/* ---------- Helpers Storage: lessons list ---------- */
+function loadAllLessons(){
+  try {
+    const raw = localStorage.getItem(LESSONS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e){ console.warn('Erro leitura lessons', e); return null; }
+}
+function saveAllLessons(obj){
+  try {
+    localStorage.setItem(LESSONS_KEY, JSON.stringify(obj));
+    return true;
+  } catch(e){ console.warn('Erro salvar lessons', e); return false; }
+}
+function getSelectedLessonId(){
+  return localStorage.getItem(SELECTED_LESSON_KEY) || null;
+}
+function setSelectedLessonId(id){
+  if (id === null) localStorage.removeItem(SELECTED_LESSON_KEY);
+  else localStorage.setItem(SELECTED_LESSON_KEY, String(id));
+}
+
+/* ---------- Init lessons data (first time) ---------- */
+let lessons = loadAllLessons();
+if (!lessons || !Array.isArray(lessons) || lessons.length===0){
+  // create default lesson
+  lessons = [{ id: Date.now().toString(), data: DEFAULT_LESSON }];
+  saveAllLessons(lessons);
+  setSelectedLessonId(lessons[0].id);
+} 
+let selectedLessonId = getSelectedLessonId() || lessons[0].id;
+
+/* ---------- Runtime state (for selected lesson) ---------- */
+let lesson = JSON.parse(JSON.stringify(lessons.find(l=>l.id===selectedLessonId).data));
+let scenes = lesson.scenes;
+let exercises = lesson.exercises || [];
+let idx = 0;
+let audioPT = null;
+let audioRU = null;
+let playing = false;
+let useFallback = false;
+let subtitleMode = 'both';
+let attemptAutoPlay = true;
+
+/* ---------- UI refs ---------- */
+const lessonsListEl = document.getElementById('lessonsList');
+const createLessonBtn = document.getElementById('createLessonBtn');
+const newLessonName = document.getElementById('newLessonName');
+const visualArea = document.getElementById('visualArea');
+const bg = document.getElementById('bg');
+const ptText = document.getElementById('ptText');
+const ruText = document.getElementById('ruText');
+const bar = document.getElementById('bar');
+const status = document.getElementById('status');
+const sceneList = document.getElementById('sceneList');
+const startOverlay = document.getElementById('startOverlay');
+const startLessonBtn = document.getElementById('startLessonBtn');
+const editorBtn = document.getElementById('editorBtn');
+const editorPanel = document.getElementById('editorPanel');
+const closeEditor = document.getElementById('closeEditor');
+const editorScenesContainer = document.getElementById('editorScenesContainer');
+const addSceneBtn = document.getElementById('addSceneBtn');
+const saveApplyBtn = document.getElementById('saveApplyBtn');
+const exportJsonBtn = document.getElementById('exportJsonBtn');
+const importJsonBtn = document.getElementById('importJsonBtn');
+const resetBtn = document.getElementById('resetBtn');
+const fsBtn = document.getElementById('fsBtn');
+const viewBtn = document.getElementById('viewBtn');
+const questionsContainer = document.getElementById('questionsContainer');
+const exercisesPanel = document.getElementById('exercisesPanel');
+const restartLessonBtn = document.getElementById('restartLessonBtn');
+const exportLessonBtn = document.getElementById('exportLessonBtn');
+
+/* ---------- Build lessons menu ---------- */
+function renderLessonsMenu(){
+  lessonsListEl.innerHTML = '';
+  lessons.forEach((l)=>{
+    const el = document.createElement('div');
+    el.className = 'lesson-item' + (l.id===selectedLessonId ? ' active' : '');
+    el.innerHTML = `<div style="flex:1">${escapeHtml(l.data.name || 'Aula')}</div>
+      <div class="lesson-actions">
+        <button class="small-ghost" data-id="${l.id}" data-action="select">Abrir</button>
+        <button class="small-ghost" data-id="${l.id}" data-action="delete">✖</button>
+      </div>`;
+    lessonsListEl.appendChild(el);
+    el.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        if (action === 'select') selectLesson(id);
+        else if (action === 'delete') deleteLesson(id);
+      });
+    });
+    el.addEventListener('click', ()=> selectLesson(l.id));
+  });
+}
+function createLesson(name){
+  const id = Date.now().toString();
+  const clone = JSON.parse(JSON.stringify(DEFAULT_LESSON));
+  clone.name = name || `Aula ${new Date().toLocaleString()}`;
+  lessons.push({ id, data: clone });
+  saveAllLessons(lessons);
+  selectLesson(id);
+  renderLessonsMenu();
+}
+function selectLesson(id){
+  const found = lessons.find(l=>l.id===id);
+  if (!found) return;
+  selectedLessonId = id;
+  setSelectedLessonId(id);
+  lesson = JSON.parse(JSON.stringify(found.data));
+  scenes = lesson.scenes || [];
+  exercises = lesson.exercises || [];
+  idx = 0;
+  renderLessonsMenu();
+  buildSceneList();
+  renderEditorScenes();
+  renderScene();
+  status.textContent = 'Aula carregada — pronto';
+}
+function deleteLesson(id){
+  if (!confirm('Apagar esta aula? Esta ação é irreversível (localmente).')) return;
+  lessons = lessons.filter(l=>l.id!==id);
+  saveAllLessons(lessons);
+  if (selectedLessonId === id){
+    if (lessons.length>0) selectLesson(lessons[0].id);
+    else {
+      // create new default
+      createLesson(DEFAULT_LESSON_NAME);
+    }
+  } else {
+    renderLessonsMenu();
+  }
+}
+
+/* wire create button */
+createLessonBtn.addEventListener('click', ()=>{
+  const name = newLessonName.value.trim() || `${DEFAULT_LESSON_NAME} ${lessons.length+1}`;
+  createLesson(name);
+  newLessonName.value = '';
+});
+
+/* ---------- Scene list & render ---------- */
+function buildSceneList(){
+  sceneList.innerHTML = '';
+  scenes.forEach((s,i)=>{
+    const el = document.createElement('div');
+    el.className = 'scene-item' + (i===idx? ' active':'' );
+    el.textContent = `${i+1}. ${s.pt.slice(0,50)}${s.pt.length>50? '...':''}`;
+    el.onclick = ()=> goTo(i);
+    sceneList.appendChild(el);
+  });
+}
+function renderScene(){
+  const s = scenes[idx] || { pt:'', ru:'', img:'' };
+  bg.style.backgroundImage = s.img ? `url(${s.img})` : '';
+  updateSubtitles();
+  updateActiveList();
+}
+function updateActiveList(){ Array.from(sceneList.children).forEach((el,i)=> el.classList.toggle('active', i===idx)); }
+function updateSubtitles(){
+  const s = scenes[idx] || {pt:'', ru:''};
+  if (subtitleMode === 'pt'){ ptText.textContent = s.pt || ''; ruText.style.display = 'none'; ptText.style.display = 'block'; }
+  else if (subtitleMode === 'ru'){ ruText.style.display = 'block'; ruText.textContent = s.ru || ''; ptText.style.display = 'none'; }
+  else { ptText.style.display = 'block'; ruText.style.display = 'block'; ptText.textContent = s.pt || ''; ruText.textContent = s.ru || ''; }
+  status.textContent = `Cena ${idx+1} / ${scenes.length}`;
+}
+
+/* ---------- TTS (Google attempt + fallback) ---------- */
+function googleTTSUrl(text, lang){
+  const base = 'https://translate.google.com/translate_tts';
+  const tl = (lang === 'pt' ? 'pt-BR' : 'ru-RU');
+  return `${base}?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${tl}&client=tw-ob`;
+}
+async function loadAudio(text, lang){
+  const url = googleTTSUrl(text, lang);
+  try {
+    const r = await fetch(url, { method:'GET', mode:'cors' });
+    if (!r.ok) throw new Error('status ' + r.status);
+    const blob = await r.blob();
+    return URL.createObjectURL(blob);
+  } catch(err){
+    console.warn('TTS remoto falhou:', err);
+    useFallback = true;
+    return null;
+  }
+}
+
+/* ---------- Player (respeita order por cena) ---------- */
+async function prepareAndPlay(i){
+  stopAll();
+  idx = (typeof i === 'number') ? i : idx;
+  renderScene();
+  status.textContent = `Carregando áudios (cena ${idx+1})...`;
+
+  const s = scenes[idx] || { pt:'', ru:'', order:'pt-ru' };
+  const order = s.order || 'pt-ru';
+
+  if (!useFallback){
+    const firstText = (order === 'pt-ru') ? s.pt : s.ru;
+    const secondText = (order === 'pt-ru') ? s.ru : s.pt;
+    const firstLang = (order === 'pt-ru') ? 'pt' : 'ru';
+    const secondLang = (order === 'pt-ru') ? 'ru' : 'pt';
+
+    const firstUrl = await loadAudio(firstText, firstLang);
+    const secondUrl = !useFallback ? await loadAudio(secondText, secondLang) : null;
+
+    if (!useFallback && firstUrl && secondUrl){
+      // create Audio instances
+      const firstAudio = new Audio(firstUrl);
+      const secondAudio = new Audio(secondUrl);
+
+      firstAudio.onended = async ()=> {
+        await delay(480);
+        secondAudio.play().catch(()=>{});
+      };
+      secondAudio.onended = ()=> { finishScene(); };
+
+      // keep refs for pause/stop
+      if (order === 'pt-ru'){ audioPT = firstAudio; audioRU = secondAudio; }
+      else { audioRU = firstAudio; audioPT = secondAudio; }
+
+      try { firstAudio.currentTime = 0; firstAudio.play(); updateProgressLoop(); }
+      catch(e){ status.textContent = 'Clique em ▶️ para permitir áudio.'; }
+      return;
+    } else {
+      useFallback = true;
+    }
+  }
+
+  // fallback: speechSynthesis
+  status.textContent = 'Usando fallback local (speechSynthesis).';
+  try {
+    if (order === 'pt-ru'){
+      await speakFallback(s.pt, 'pt-BR');
+      await delay(520);
+      await speakFallback(s.ru, 'ru-RU');
+    } else {
+      await speakFallback(s.ru, 'ru-RU');
+      await delay(520);
+      await speakFallback(s.pt, 'pt-BR');
+    }
+    finishScene();
+  } catch(e){
+    status.textContent = 'Clique em ▶️ para reproduzir áudio.';
+  }
+}
+
+function attachAudioEventsSpecific(firstAudio, secondAudio, firstLang, secondLang){
+  if (firstAudio){ firstAudio.onplay = ()=> status.textContent = `Reproduzindo (${firstLang})`; firstAudio.onpause = ()=> status.textContent = 'Pausado'; }
+  if (secondAudio){ secondAudio.onplay = ()=> status.textContent = `Reproduzindo (${secondLang})`; secondAudio.onpause = ()=> status.textContent = 'Pausado'; }
+}
+
+function playSequence(){
+  if (!audioPT && !audioRU){ status.textContent='Áudio não carregado.'; return; }
+  playing = true;
+  if (audioPT) audioPT.play().catch(()=> status.textContent='Clique em ▶️ para permitir áudio.');
+  updateProgressLoop();
+}
+function pauseAll(){
+  if (useFallback && window.speechSynthesis && window.speechSynthesis.speaking){
+    if (!window.speechSynthesis.paused) { window.speechSynthesis.pause(); status.textContent='Pausado'; }
+    else { window.speechSynthesis.resume(); status.textContent='Retomando'; }
+    return;
+  }
+  if (audioPT && !audioPT.paused) audioPT.pause();
+  if (audioRU && !audioRU.paused) audioRU.pause();
+  playing = false;
+  status.textContent = 'Pausado';
+}
+function stopAll(){
+  playing = false;
+  if (audioPT){ try{ audioPT.pause(); audioPT.currentTime = 0; }catch{} audioPT=null; }
+  if (audioRU){ try{ audioRU.pause(); audioRU.currentTime = 0; }catch{} audioRU=null; }
+  if (window.speechSynthesis) try{ window.speechSynthesis.cancel(); }catch{}
+  bar.style.width = '0%';
+  status.textContent = 'Parado';
+}
+function next(){ if (idx < scenes.length-1) prepareAndPlay(idx+1); else { status.textContent = 'Última cena.'; showExercises(); } }
+function prev(){ if (idx > 0) prepareAndPlay(idx-1); else { status.textContent = 'Primeira cena.'; } }
+function goTo(i){ prepareAndPlay(i); }
+
+/* progress (aproximação quando blobs carregados) */
+function updateProgressLoop(){
+  if (!audioPT && !audioRU) return;
+  playing = true;
+  const loop = ()=>{
+    if (!playing) return;
+    const d1 = audioPT && audioPT.duration && !isNaN(audioPT.duration) ? audioPT.duration : 0;
+    const d2 = audioRU && audioRU.duration && !isNaN(audioRU.duration) ? audioRU.duration : 0;
+    let total = d1 + d2;
+    let current = 0;
+    if (audioPT && !audioPT.ended) current = audioPT.currentTime;
+    else if (audioRU) current = (audioPT ? (audioPT.duration || 0) : 0) + (audioRU.currentTime || 0);
+    if (total>0) bar.style.width = Math.min(100, Math.round((current/total)*100)) + '%';
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+/* fallback TTS via speechSynthesis */
+function speakFallback(text, lang){
+  return new Promise((res)=>{
+    try{
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang;
+      u.rate = 0.95;
+      u.onstart = ()=> { status.textContent = (lang==='pt-BR' ? 'Falando (pt)' : 'Falando (ru)'); };
+      u.onend = ()=> { res(); };
+      window.speechSynthesis.speak(u);
+    }catch(e){ console.warn(e); res(); }
+  });
+}
+
+function finishScene(){
+  playing = false;
+  bar.style.width = '100%';
+  status.textContent = `Concluído — cena ${idx+1}/${scenes.length}`;
+  if (idx < scenes.length-1) setTimeout(()=> prepareAndPlay(idx+1), 900);
+  else { // chegou ao final
+    setTimeout(()=> showExercises(), 900);
+  }
+}
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* ---------- Editor ---------- */
+function openEditor(){ editorPanel.style.display = 'flex'; renderEditorScenes(); }
+function closeEditorPanel(){ editorPanel.style.display = 'none'; }
+
+function renderEditorScenes(){
+  editorScenesContainer.innerHTML = '';
+  scenes.forEach((s,i)=>{
+    const div = document.createElement('div');
+    div.className = 'editor-scene';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-weight:700">Cena ${i+1}</div>
+        <div style="display:flex;gap:6px">
+          <button class="small-ghost" data-action="up" title="Mover para cima">▲</button>
+          <button class="small-ghost" data-action="down" title="Mover para baixo">▼</button>
+          <button class="small-ghost" data-action="remove" title="Remover">✖</button>
+        </div>
+      </div>
+
+      <label style="margin-top:8px;font-size:0.9rem">Texto (Português)</label>
+      <textarea rows="3" data-field="pt">${escapeHtml(s.pt)}</textarea>
+
+      <label style="margin-top:8px;font-size:0.9rem">Текст (Русский)</label>
+      <textarea rows="3" data-field="ru">${escapeHtml(s.ru)}</textarea>
+
+      <label style="margin-top:8px;font-size:0.9rem">Ordem de reprodução</label>
+      <select data-field="order">
+        <option value="pt-ru" ${s.order==='pt-ru' ? 'selected' : ''}>PT → RU</option>
+        <option value="ru-pt" ${s.order==='ru-pt' ? 'selected' : ''}>RU → PT</option>
+      </select>
+
+      <label style="margin-top:8px;font-size:0.9rem">Imagem (upload)</label>
+      <input type="file" accept="image/*" data-field="imgfile">
+      <img src="${escapeAttr(s.img)}" class="img-preview" data-preview>
+    `;
+    // actions
+    div.querySelectorAll('[data-action]').forEach(btn=>{
+      btn.addEventListener('click', ()=> {
+        const action = btn.getAttribute('data-action');
+        if (action === 'remove'){ scenes.splice(i,1); renderEditorScenes(); buildSceneList(); renderScene(); saveLesson(); return; }
+        if (action === 'up' && i>0){ const tmp = scenes[i-1]; scenes[i-1]=scenes[i]; scenes[i]=tmp; renderEditorScenes(); buildSceneList(); renderScene(); saveLesson(); return; }
+        if (action === 'down' && i<scenes.length-1){ const tmp = scenes[i+1]; scenes[i+1]=scenes[i]; scenes[i]=tmp; renderEditorScenes(); buildSceneList(); renderScene(); saveLesson(); return; }
+      });
+    });
+
+    // file input
+    const fileInput = div.querySelector('input[type="file"][data-field="imgfile"]');
+    const preview = div.querySelector('img[data-preview]');
+    fileInput.addEventListener('change', (ev)=>{
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = function(e){
+        const dataUrl = e.target.result;
+        preview.src = dataUrl;
+        scenes[i].img = dataUrl;
+        buildSceneList();
+        renderScene();
+        saveLesson();
+      };
+      reader.readAsDataURL(f);
+    });
+
+    // inputs
+    div.querySelectorAll('[data-field]').forEach(el=>{
+      el.addEventListener('input', (ev)=>{
+        const field = el.getAttribute('data-field');
+        if (field === 'imgfile') return;
+        scenes[i][field] = el.value;
+        buildSceneList();
+        renderScene();
+        saveLesson();
+      });
+    });
+
+    editorScenesContainer.appendChild(div);
+  });
+}
+
+/* ---------- Lesson save / export / import ---------- */
+function saveLesson(){
+  // find lesson entry and update
+  const idxL = lessons.findIndex(l=>l.id===selectedLessonId);
+  if (idxL === -1) return;
+  lessons[idxL].data.name = lesson.name || lessons[idxL].data.name;
+  lessons[idxL].data.scenes = scenes;
+  lessons[idxL].data.exercises = exercises;
+  saveAllLessons(lessons);
+  renderLessonsMenu();
+}
+saveApplyBtn.addEventListener('click', ()=> {
+  // apply name from first scene? keep as is for now
+  saveLesson();
+  renderEditorScenes();
+  buildSceneList();
+  renderScene();
+  alert('Alterações salvas e aplicadas.');
+});
+exportJsonBtn.addEventListener('click', ()=> {
+  const data = JSON.stringify({ name: lesson.name || 'Aula', scenes, exercises }, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (lesson.name || 'aula').replace(/\s+/g,'_') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+importJsonBtn.addEventListener('click', ()=> {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = (e)=> {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=> {
+      try {
+        const obj = JSON.parse(ev.target.result);
+        if (!obj || !Array.isArray(obj.scenes)) throw new Error('Formato inválido (esperado {scenes: [...]})');
+        scenes = obj.scenes;
+        exercises = obj.exercises || exercises;
+        lesson.name = obj.name || lesson.name;
+        saveLesson();
+        buildSceneList();
+        renderEditorScenes();
+        renderScene();
+        alert('Importado com sucesso.');
+      } catch(err){ alert('Erro ao importar JSON: ' + err.message); }
+    };
+    reader.readAsText(f);
+  };
+  input.click();
+});
+resetBtn.addEventListener('click', ()=> {
+  if (!confirm('Resetar as cenas para os originais? Isto substituirá suas alterações locais.')) return;
+  scenes = JSON.parse(JSON.stringify(DEFAULT_LESSON.scenes));
+  exercises = JSON.parse(JSON.stringify(DEFAULT_LESSON.exercises));
+  saveLesson();
+  buildSceneList();
+  renderEditorScenes();
+  renderScene();
+});
+
+/* ---------- Controls wiring ---------- */
+document.getElementById('playBtn').addEventListener('click', ()=> {
+  if ((audioPT || useFallback) && !audioPT) prepareAndPlay(idx);
+  else if (audioPT && audioPT.paused) { audioPT.play().catch(()=> status.textContent = 'Clique em ▶️ para permitir áudio.'); if (audioRU && audioRU.paused) audioRU.play().catch(()=>{}); }
+  else prepareAndPlay(idx);
+});
+document.getElementById('pauseBtn').addEventListener('click', ()=> pauseAll());
+document.getElementById('stopBtn').addEventListener('click', ()=> stopAll());
+document.getElementById('nextBtn').addEventListener('click', ()=> next());
+document.getElementById('prevBtn').addEventListener('click', ()=> prev());
+
+document.getElementById('toggleLang').addEventListener('click', ()=> {
+  if (subtitleMode === 'pt'){ subtitleMode = 'ru'; document.getElementById('toggleLang').textContent = 'Legendas: RU'; }
+  else if (subtitleMode === 'ru'){ subtitleMode = 'both'; document.getElementById('toggleLang').textContent = 'Legendas: Ambos'; }
+  else { subtitleMode = 'pt'; document.getElementById('toggleLang').textContent = 'Legendas: PT'; }
+  updateSubtitles();
+});
+
+/* keyboard shortcuts */
+window.addEventListener('keydown', (e)=>{
+  if (e.ctrlKey && e.key.toLowerCase() === 'e'){ e.preventDefault(); openEditor(); }
+  if (e.key === 'ArrowRight') next();
+  if (e.key === 'ArrowLeft') prev();
+  if (e.key === ' ') { e.preventDefault(); const playBtn = document.getElementById('playBtn'); playBtn.click(); }
+});
+
+/* ---------- Fullscreen and Start button ---------- */
+let isFullscreen = false;
+fsBtn.addEventListener('click', async ()=>{
+  try {
+    if (!isFullscreen){
+      if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+      else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
+      else if (document.documentElement.mozRequestFullScreen) await document.documentElement.mozRequestFullScreen();
+      isFullscreen = true; fsBtn.textContent = '🗗 Sair da tela cheia';
+    } else {
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+      else if (document.mozCancelFullScreen) await document.mozCancelFullScreen();
+      isFullscreen = false; fsBtn.textContent = '⛶ Tela cheia';
+    }
+  } catch(e){ console.warn('Fullscreen erro', e); }
+});
+document.addEventListener('fullscreenchange', ()=> { isFullscreen = !!document.fullscreenElement; fsBtn.textContent = isFullscreen ? '🗗 Sair da tela cheia' : '⛶ Tela cheia'; 
+  // if exit fullscreen while paused at start, show start overlay again
+  if (!isFullscreen && !playing && idx === 0) startOverlay.style.display = 'flex';
+});
+
+startLessonBtn.addEventListener('click', async ()=>{
+  // enter fullscreen and start from 0
+  try {
+    if (!document.fullscreenElement){
+      if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+      else if (document.documentElement.webkitRequestFullscreen) await document.documentElement.webkitRequestFullscreen();
+    }
+  } catch(e){ console.warn('Erro ao solicitar fullscreen', e); }
+
+  startOverlay.style.display = 'none';
+  attemptAutoPlay = true;
+  idx = 0;
+  renderScene();
+  prepareAndPlay(0);
+});
+
+/* view-only toggler */
+viewBtn.addEventListener('click', ()=>{
+  document.body.classList.toggle('hide-interface');
+  const active = document.body.classList.contains('hide-interface');
+  viewBtn.textContent = active ? '↩️ Sair modo tela' : '🖥️ Visualizar somente tela';
+});
+
+/* editor open/close */
+editorBtn.addEventListener('click', ()=> openEditor());
+closeEditor.addEventListener('click', ()=> closeEditorPanel());
+
+/* ---------- Exercises (after lesson) ---------- */
+function showExercises(){
+  // build questions
+  exercisesPanel.style.display = 'block';
+  questionsContainer.innerHTML = '';
+  const exs = exercises && exercises.length ? exercises : DEFAULT_LESSON.exercises;
+  exs.forEach((q, qi)=>{
+    const qdiv = document.createElement('div');
+    qdiv.className = 'question';
+    qdiv.innerHTML = `<div style="font-weight:700;margin-bottom:6px">${qi+1}. ${escapeHtml(q.q)}</div>`;
+    q.choices.forEach((c, ci)=>{
+      const btn = document.createElement('button');
+      btn.className = 'choice';
+      btn.textContent = c;
+      btn.addEventListener('click', ()=>{
+        if (ci === q.correct){ btn.classList.add('correct'); btn.textContent = `✅ ${c}`; } 
+        else { btn.classList.add('wrong'); btn.textContent = `❌ ${c}`; }
+        // disable siblings
+        qdiv.querySelectorAll('.choice').forEach(cb=> cb.disabled = true);
+      });
+      qdiv.appendChild(btn);
+    });
+    questionsContainer.appendChild(qdiv);
+  });
+  // scroll to exercises
+  exercisesPanel.scrollIntoView({behavior:'smooth'});
+}
+
+/* restart lesson button */
+restartLessonBtn.addEventListener('click', ()=>{
+  exercisesPanel.style.display = 'none';
+  idx = 0;
+  renderScene();
+  startOverlay.style.display = 'flex';
+  stopAll();
+});
+
+/* export whole lesson */
+exportLessonBtn.addEventListener('click', ()=> {
+  const payload = { name: lesson.name || DEFAULT_LESSON_NAME, scenes, exercises };
+  const data = JSON.stringify(payload, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (lesson.name || 'aula').replace(/\s+/g,'_') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ---------- Helpers / init ---------- */
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(s){ try { return s && s.startsWith('data:') ? s : s; } catch(e){ return s; } }
+
+// initial view
+function init(){
+  renderLessonsMenu();
+  buildSceneList();
+  renderEditorScenes();
+  renderScene();
+  status.textContent = 'Pronto — clique em ▶️ Começar';
+}
+init();
+
+/* ---------- Editor scene list builder (called earlier) ---------- */
+function renderEditorScenes(){
+  // uses existing scenes array
+  editorScenesContainer.innerHTML = '';
+  scenes.forEach((s,i)=>{
+    const div = document.createElement('div');
+    div.className = 'editor-scene';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-weight:700">Cena ${i+1}</div>
+        <div style="display:flex;gap:6px">
+          <button class="small-ghost" data-action="up" title="Mover para cima">▲</button>
+          <button class="small-ghost" data-action="down" title="Mover para baixo">▼</button>
+          <button class="small-ghost" data-action="remove" title="Remover">✖</button>
+        </div>
+      </div>
+
+      <label style="margin-top:8px;font-size:0.9rem">Texto (Português)</label>
+      <textarea rows="3" data-field="pt">${escapeHtml(s.pt)}</textarea>
+
+      <label style="margin-top:8px;font-size:0.9rem">Текст (Русский)</label>
+      <textarea rows="3" data-field="ru">${escapeHtml(s.ru)}</textarea>
+
+      <label style="margin-top:8px;font-size:0.9rem">Ordem de reprodução</label>
+      <select data-field="order">
+        <option value="pt-ru" ${s.order==='pt-ru' ? 'selected' : ''}>PT → RU</option>
+        <option value="ru-pt" ${s.order==='ru-pt' ? 'selected' : ''}>RU → PT</option>
+      </select>
+
+      <label style="margin-top:8px;font-size:0.9rem">Imagem (upload)</label>
+      <input type="file" accept="image/*" data-field="imgfile">
+      <img src="${escapeAttr(s.img)}" class="img-preview" data-preview>
+    `;
+    // actions
+    div.querySelectorAll('[data-action]').forEach(btn=>{
+      btn.addEventListener('click', ()=> {
+        const action = btn.getAttribute('data-action');
+        if (action === 'remove'){ scenes.splice(i,1); renderEditorScenes(); buildSceneList(); renderScene(); saveLesson(); return; }
+        if (action === 'up' && i>0){ const tmp = scenes[i-1]; scenes[i-1]=scenes[i]; scenes[i]=tmp; renderEditorScenes(); buildSceneList(); renderScene(); saveLesson(); return; }
+        if (action === 'down' && i<scenes.length-1){ const tmp = scenes[i+1]; scenes[i+1]=scenes[i]; scenes[i]=tmp; renderEditorScenes(); buildSceneList(); renderScene(); saveLesson(); return; }
+      });
+    });
+
+    // file input
+    const fileInput = div.querySelector('input[type="file"][data-field="imgfile"]');
+    const preview = div.querySelector('img[data-preview]');
+    fileInput.addEventListener('change', (ev)=>{
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = function(e){
+        const dataUrl = e.target.result;
+        preview.src = dataUrl;
+        scenes[i].img = dataUrl;
+        buildSceneList();
+        renderScene();
+        saveLesson();
+      };
+      reader.readAsDataURL(f);
+    });
+
+    // inputs
+    div.querySelectorAll('[data-field]').forEach(el=>{
+      el.addEventListener('input', (ev)=>{
+        const field = el.getAttribute('data-field');
+        if (field === 'imgfile') return;
+        scenes[i][field] = el.value;
+        buildSceneList();
+        renderScene();
+        saveLesson();
+      });
+    });
+
+    editorScenesContainer.appendChild(div);
+  });
+}
+
+/* add scene button */
+addSceneBtn.addEventListener('click', ()=> {
+  scenes.push({ pt: "Nova frase em português...", ru: "Новая фраза на русском...", img: "", order: "pt-ru" });
+  renderEditorScenes();
+  buildSceneList();
+  renderScene();
+  saveLesson();
+});
+
+/* ---------- Utility: save all before unload ---------- */
+window.addEventListener('beforeunload', ()=>{
+  saveLesson();
+  saveAllLessons(lessons);
+});
+
+/* ---------- End of script ---------- */
+</script>
+</body>
+</html>

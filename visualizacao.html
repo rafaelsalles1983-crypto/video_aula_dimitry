@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Módulo Interativo — Visualização</title>
+<style>
+  body {
+    margin: 0;
+    font-family: "Poppins", system-ui;
+    background: #071014;
+    color: #eef6ee;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .module {
+    display: flex;
+    flex-direction: row;
+    width: 92%;
+    max-width: 1100px; /* 🔹 reduzido para caber melhor */
+    min-height: 520px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    background: rgba(255,255,255,0.03);
+    position: relative;
+  }
+  .sidebar {
+    width: 26%;
+    min-width: 200px;
+    background: rgba(0,0,0,0.25);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .scene-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: background .2s;
+  }
+  .scene-item:hover { background: rgba(255,255,255,0.08); }
+  .scene-item.active { background: #16a34a; color: #04230a; font-weight: bold; }
+  .scene-thumb { width: 50px; height: 42px; border-radius: 6px; object-fit: cover; }
+  .scene-text { font-size: .85rem; flex: 1; }
+  .content { flex: 1; display: flex; flex-direction: column; position: relative; }
+  .visual {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    padding: 24px;
+  }
+  .bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(.55);
+  }
+  .texts {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    width: 100%;
+    max-width: 900px;
+  }
+  .pt, .ru {
+    transition: all .3s;
+  }
+  .pt {
+    font-size: 1.45rem;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+  .pt span { padding: 0 2px; transition: color .2s; }
+  .ru {
+    font-size: 1.1rem;
+    opacity: .85;
+    margin-top: 8px;
+  }
+  .controls-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    padding: 10px;
+    background: rgba(255,255,255,0.03);
+  }
+  button {
+    background: #16a34a;
+    color: #04230a;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: .9rem;
+    transition: all .2s;
+  }
+  button:hover { background: #22c55e; transform: scale(1.03); }
+  #langBtn {
+    background: #16a34a;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border-radius: 8px;
+    padding: 6px 12px;
+    z-index: 10;
+  }
+  .progress {
+    width: 88%;
+    height: 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 0 auto 8px;
+  }
+  .bar { height: 100%; width: 0%; background: linear-gradient(90deg,#ffd366,#ffb86b); transition: width .3s; }
+  footer { font-size: .8rem; text-align: center; opacity: .6; padding-bottom: 6px; }
+
+  /* 🔹 Modal */
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    justify-content: center;
+    align-items: flex-start;
+    z-index: 1000;
+    overflow-y: auto;
+    padding-top: 60px;
+  }
+  .modal-content {
+    background: #fff;
+    color: #222;
+    padding: 20px;
+    border-radius: 12px;
+    max-width: 650px;
+    width: 90%;
+    text-align: left;
+    margin-bottom: 60px;
+    position: relative;
+  }
+  .modal-content h3 { margin-top: 0; color: #0d6930; }
+  .modal-content button {
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+  .close-modal {
+    position: absolute; top: 10px; right: 14px;
+    background: none; border: none;
+    font-size: 24px; cursor: pointer; color: #222;
+  }
+
+  /* 🔹 Seletor de Aulas */
+  #aulaModal .lesson-item {
+    background: #0b2610;
+    border: 1px solid #16a34a;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px 0;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  #aulaModal .lesson-item:hover { background: #16a34a; color: #04230a; }
+
+  @media(max-width:900px){
+    .module{flex-direction:column;width:100%;border-radius:0;}
+    .sidebar{width:100%;flex-direction:row;overflow-x:auto;height:110px;}
+    .scene-item{flex-direction:column;width:120px;border:none;border-right:1px solid rgba(255,255,255,0.05);}
+    .scene-thumb{width:100%;height:80px;}
+    .scene-text{text-align:center;font-size:.8rem;}
+    .pt{font-size:1.3rem;}
+    #langBtn{top:auto;bottom:10px;right:10px;}
+  }
+</style>
+</head>
+<body>
+<div class="module">
+  <div class="sidebar" id="sceneList"></div>
+  <div class="content">
+    <div class="visual">
+      <button id="langBtn">🇧🇷 / 🇷🇺</button>
+      <div id="bg" class="bg"></div>
+      <div class="texts" id="textBlock">
+        <div id="ptText" class="pt"></div>
+        <div id="ruText" class="ru"></div>
+      </div>
+    </div>
+    <div class="progress"><div id="bar" class="bar"></div></div>
+    <div class="controls-area">
+      <button id="prevBtn">⏮️ Anterior</button>
+      <button id="playBtn">▶️ Reproduzir</button>
+      <button id="pauseBtn">⏸️ Pausar</button>
+      <button id="nextBtn">⏭️ Próximo</button>
+      <button id="allBtn">🎧 Reproduzir Tudo</button>
+      <button id="exerciseBtn">📝 Exercício</button>
+      <button id="aulasBtn">📚 Aulas</button>
+    </div>
+    <footer>© 2025 Clube Eslavo — modo visualização</footer>
+
+    <!-- 🔹 Modal Exercício -->
+    <div id="exerciseModal" class="modal">
+      <div class="modal-content" id="exerciseContent">
+        <button class="close-modal" onclick="fecharExercicio()">✖</button>
+      </div>
+    </div>
+
+    <!-- 🔹 Modal de Aulas -->
+    <div id="aulaModal" class="modal">
+      <div class="modal-content" id="aulaContent">
+        <button class="close-modal" onclick="fecharAulas()">✖</button>
+        <h3>Selecione uma Aula</h3>
+        <div id="lessonList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LESSONS_KEY='clubeslavo_lessons_v1';
+const SELECTED_KEY='clubeslavo_selected_lesson_v1';
+const lessons=JSON.parse(localStorage.getItem(LESSONS_KEY)||"[]");
+const selectedId=localStorage.getItem(SELECTED_KEY);
+let current=lessons.find(l=>l.id===selectedId)?.data||lessons[0]?.data||null;
+let idx=0, playing=false, tocandoTudo=false, langOrder='pt-ru';
+
+const ptText=document.getElementById('ptText');
+const ruText=document.getElementById('ruText');
+const list=document.getElementById('sceneList');
+const bg=document.getElementById('bg');
+const bar=document.getElementById('bar');
+const modal=document.getElementById('exerciseModal');
+const modalContent=document.getElementById('exerciseContent');
+const aulaModal=document.getElementById('aulaModal');
+const lessonList=document.getElementById('lessonList');
+const langBtn=document.getElementById('langBtn');
+
+langBtn.onclick=()=>{
+  langOrder = langOrder==='pt-ru'?'ru-pt':'pt-ru';
+  const tb=document.getElementById('textBlock');
+  tb.innerHTML = (langOrder==='pt-ru')
+    ? `<div id="ptText" class="pt">${ptText.innerHTML}</div><div id="ruText" class="ru">${ruText.innerHTML}</div>`
+    : `<div id="ruText" class="ru">${ruText.innerHTML}</div><div id="ptText" class="pt">${ptText.innerHTML}</div>`;
+};
+
+function carregarLista(){
+  list.innerHTML="";
+  current.scenes.forEach((c,i)=>{
+    const d=document.createElement('div');
+    const shortText = c.pt.split(" ").slice(0,3).join(" ") + "...";
+    d.className="scene-item"+(i===idx?" active":"");
+    d.innerHTML=`<img src="${c.img}" class="scene-thumb"><div class="scene-text">${shortText}</div>`;
+    d.onclick=()=>{idx=i;mostrarCena();};
+    list.appendChild(d);
+  });
+}
+function mostrarCena(){
+  const c=current.scenes[idx];
+  ptText.innerHTML=c.pt.split(" ").map(p=>`<span>${p}</span>`).join(" ");
+  ruText.textContent=c.ru;
+  bg.style.backgroundImage=`url(${c.img})`;
+  bar.style.width=((idx+1)/current.scenes.length*100)+'%';
+  [...list.children].forEach((el,i)=>el.classList.toggle('active',i===idx));
+}
+
+function falarCena(cb){
+  speechSynthesis.cancel();
+  const c=current.scenes[idx];
+  const spans=ptText.querySelectorAll("span");
+  spans.forEach(s=>s.style.color="#eef6ee");
+  let uMain, uTrans;
+  if(langOrder==='pt-ru'){
+    uMain=new SpeechSynthesisUtterance(c.pt);
+    uTrans=new SpeechSynthesisUtterance(c.ru||"");
+    uMain.lang='pt-BR'; uTrans.lang='ru-RU';
+  } else {
+    uMain=new SpeechSynthesisUtterance(c.ru||"");
+    uTrans=new SpeechSynthesisUtterance(c.pt);
+    uMain.lang='ru-RU'; uTrans.lang='pt-BR';
+  }
+  uMain.rate=0.9; uTrans.rate=0.9;
+
+  let i=0, words=c.pt.split(" ");
+  uMain.onboundary=e=>{
+    if(e.name==="word"){
+      spans.forEach(s=>s.style.color="#eef6ee");
+      if(spans[i])spans[i].style.color="#ffd366";
+      i++;
+    }
+  };
+  uMain.onend=()=>{
+    spans.forEach(s=>s.style.color="#eef6ee");
+    speechSynthesis.speak(uTrans);
+    uTrans.onend=()=>{playing=false;if(cb)cb();};
+  };
+  playing=true;
+  speechSynthesis.speak(uMain);
+}
+
+function executarTudo(){
+  if(idx>=current.scenes.length){tocandoTudo=false;abrirExercicio();return;}
+  mostrarCena();falarCena(()=>{idx++;executarTudo();});
+}
+document.getElementById('playBtn').onclick=()=>{if(!playing){falarCena();}};
+document.getElementById('pauseBtn').onclick=()=>{speechSynthesis.cancel();playing=false;};
+document.getElementById('nextBtn').onclick=()=>{if(idx<current.scenes.length-1){idx++;mostrarCena();}};
+document.getElementById('prevBtn').onclick=()=>{if(idx>0){idx--;mostrarCena();}};
+document.getElementById('allBtn').onclick=()=>{if(!tocandoTudo){tocandoTudo=true;idx=0;executarTudo();}};
+document.getElementById('exerciseBtn').onclick=abrirExercicio;
+document.getElementById('aulasBtn').onclick=abrirAulas;
+
+function abrirExercicio(){
+  modal.style.display='flex';
+  modal.scrollTop=0;
+  if(current.exercises && current.exercises.length){
+    modalContent.innerHTML=`<button class="close-modal" onclick="fecharExercicio()">✖</button><h3>Exercícios — ${current.name}</h3>`;
+    current.exercises.forEach((ex,i)=>{
+      const div=document.createElement('div');
+      div.innerHTML=`<p><b>${i+1}. ${ex.q}</b></p>`+ex.choices.map((c,j)=>`
+        <label><input type="radio" name="q${i}"> ${c}</label><br>`).join("");
+      modalContent.appendChild(div);
+    });
+    const btn=document.createElement('button');
+    btn.textContent='✅ Enviar Respostas';
+    btn.onclick=()=>mostrarConclusao();
+    modalContent.appendChild(btn);
+  } else {
+    modalContent.innerHTML='<p>Nenhum exercício encontrado para esta aula.</p><button onclick="fecharExercicio()">Fechar</button>';
+  }
+}
+function mostrarConclusao(){
+  modalContent.innerHTML=`
+    <h3>🎉 Conclusão da Aula</h3>
+    <p>Parabéns por completar esta aula! Continue praticando os diálogos e avance para a próxima.</p>
+    <button onclick="fecharExercicio()">Fechar</button>
+  `;
+}
+function fecharExercicio(){modal.style.display='none';}
+function abrirAulas(){
+  aulaModal.style.display='flex';
+  lessonList.innerHTML="";
+  lessons.forEach(l=>{
+    const d=document.createElement('div');
+    d.className="lesson-item";
+    d.textContent=l.data.name;
+    d.onclick=()=>{localStorage.setItem(SELECTED_KEY,l.id);window.location.reload();};
+    lessonList.appendChild(d);
+  });
+}
+function fecharAulas(){aulaModal.style.display='none';}
+
+if(current){carregarLista();mostrarCena();} else ptText.textContent="Nenhuma aula encontrada.";
+</script>
+</body>
+</html>
